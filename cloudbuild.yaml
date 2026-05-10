@@ -1,0 +1,70 @@
+steps:
+  # Étape 1 : Tests unitaires API
+  - name: 'python:3.11-slim'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        cd services/api
+        pip install -r requirements.txt
+        python -m pytest tests/ -v
+
+  # Étape 2 : Scan secrets avec Gitleaks (bloquant)
+  - name: 'zricethezav/gitleaks'
+    entrypoint: 'gitleaks'
+    args: ['detect', '--source', '.', '--exit-code', '1', '-v']
+
+  # Étape 3 : SAST avec Semgrep
+  - name: 'python:3.11-slim'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        pip install semgrep
+        semgrep --config=auto services/ --error
+
+  # Étape 4 : Scan IaC avec Checkov
+  - name: 'python:3.11-slim'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        pip install checkov
+        checkov -d terraform/ --compact --soft-fail
+
+  # Étape 5 : Build image API
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - 'europe-west1-docker.pkg.dev/$PROJECT_ID/notes-repo/api:$COMMIT_SHA'
+      - './services/api'
+
+  # Étape 6 : Scan image avec Trivy (fail sur CVE critique)
+  - name: 'aquasec/trivy'
+    args:
+      - 'image'
+      - '--exit-code'
+      - '1'
+      - '--severity'
+      - 'CRITICAL'
+      - 'europe-west1-docker.pkg.dev/$PROJECT_ID/notes-repo/api:$COMMIT_SHA'
+
+  # Étape 7 : Push image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'europe-west1-docker.pkg.dev/$PROJECT_ID/notes-repo/api:$COMMIT_SHA']
+
+  # Étape 8 : Déploiement sur Cloud Run staging
+  - name: 'gcr.io/cloud-builders/gcloud'
+    args:
+      - 'run'
+      - 'deploy'
+      - 'notes-api-staging'
+      - '--image=europe-west1-docker.pkg.dev/$PROJECT_ID/notes-repo/api:$COMMIT_SHA'
+      - '--region=europe-west1'
+      - '--platform=managed'
+      - '--no-allow-unauthenticated'
+      - '--service-account=notes-api-sa@$PROJECT_ID.iam.gserviceaccount.com'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
