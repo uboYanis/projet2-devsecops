@@ -92,11 +92,10 @@ def delete_note(note_id: int, request: Request):
 def health():
     return {"status": "ok"}
 
-# DEMO INJECTION SQL - endpoint volontairement vulnerable
-import psycopg2
+# Recherche avec requete parametree (protection SQLi)
 @app.get("/notes/search")
-def search_notes_vulnerable(q: str):
-    conn = psycopg2.connect("dbname=notes user=notes-app")
-    cur = conn.cursor()
-    cur.execute(f"SELECT * FROM notes WHERE title LIKE '%{q}%'")
-    return cur.fetchall()
+def search_notes(q: str, request: Request):
+    if len(q) > 100:
+        raise HTTPException(status_code=400, detail="Requête trop longue")
+    results = [n for n in notes_db.values() if q.lower() in n["title"].lower()]
+    return results
