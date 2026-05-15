@@ -91,4 +91,3 @@ def delete_note(note_id: int, request: Request):
 @app.get("/health")
 def health():
     return {"status": "ok"}
-DB_PASSWORD = "SuperSecret123!"
