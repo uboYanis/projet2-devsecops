@@ -91,3 +91,12 @@ def delete_note(note_id: int, request: Request):
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+# DEMO INJECTION SQL - endpoint volontairement vulnerable
+import psycopg2
+@app.get("/notes/search")
+def search_notes_vulnerable(q: str):
+    conn = psycopg2.connect("dbname=notes user=notes-app")
+    cur = conn.cursor()
+    cur.execute(f"SELECT * FROM notes WHERE title LIKE '%{q}%'")
+    return cur.fetchall()
