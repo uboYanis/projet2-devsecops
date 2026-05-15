@@ -12,7 +12,7 @@ steps:
   # Étape 2 : Scan secrets avec Gitleaks (bloquant)
   - name: 'zricethezav/gitleaks'
     entrypoint: 'gitleaks'
-    args: ['detect', '--source', '.', '--exit-code', '1', '-v']
+    args: ['detect', '--source', '.', '--config', '.gitleaks.toml', '--exit-code', '1', '-v']
 
   # Étape 3 : SAST avec Semgrep
   - name: 'python:3.11-slim'
