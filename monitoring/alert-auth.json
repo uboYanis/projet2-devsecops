@@ -1,0 +1,18 @@
+{
+  "displayName": "Alerte auth suspecte",
+  "conditions": [
+    {
+      "displayName": "Erreurs 401/403 elevees",
+      "conditionMatchedLog": {
+        "filter": "resource.type=\"cloud_run_revision\" httpRequest.status>=401 httpRequest.status<=403"
+      }
+    }
+  ],
+  "alertStrategy": {
+    "notificationRateLimit": {
+      "period": "300s"
+    }
+  },
+  "combiner": "OR",
+  "enabled": true
+}

@@ -1,0 +1,18 @@
+{
+  "displayName": "Alerte IAM critique",
+  "conditions": [
+    {
+      "displayName": "SetIamPolicy detecte",
+      "conditionMatchedLog": {
+        "filter": "protoPayload.methodName=\"SetIamPolicy\" resource.type=\"project\""
+      }
+    }
+  ],
+  "alertStrategy": {
+    "notificationRateLimit": {
+      "period": "300s"
+    }
+  },
+  "combiner": "OR",
+  "enabled": true
+}

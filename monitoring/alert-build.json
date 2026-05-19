@@ -1,0 +1,18 @@
+{
+  "displayName": "Alerte pipeline echoue",
+  "conditions": [
+    {
+      "displayName": "Cloud Build en echec",
+      "conditionMatchedLog": {
+        "filter": "resource.type=\"build\" severity=\"ERROR\""
+      }
+    }
+  ],
+  "alertStrategy": {
+    "notificationRateLimit": {
+      "period": "300s"
+    }
+  },
+  "combiner": "OR",
+  "enabled": true
+}
