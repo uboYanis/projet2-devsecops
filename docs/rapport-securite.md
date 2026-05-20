@@ -76,6 +76,9 @@ Transactionnel — API REST synchrone avec worker asynchrone planifié
 
 ---
 
+
+
+
 ### 1.3 Acteurs du projet
 
 **Chef de projet interne**  
