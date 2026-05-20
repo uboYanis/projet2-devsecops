@@ -3,6 +3,7 @@
 API de gestion de notes avec pipeline CI/CD durci sur GCP.
 
 ## Architecture
+password = '1234567'
 
 ```
                         ┌─────────────────────────────────────────┐
