@@ -1,9 +1,8 @@
 # Projet 2 — DevSecOps avancé : CI/CD & IaC policy-gated
 
 API de gestion de notes avec pipeline CI/CD durci sur GCP.
-
+password ='123456'
 ## Architecture
-password = '1234567'
 
 ```
                         ┌─────────────────────────────────────────┐
