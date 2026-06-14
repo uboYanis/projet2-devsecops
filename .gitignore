@@ -6,3 +6,11 @@
 __pycache__/
 *.pyc
 *.tar.gz
+
+node_modules/
+dist/
+*.db
+*.sqlite
+*.sqlite3
+.venv/
+

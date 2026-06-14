@@ -9,12 +9,22 @@ steps:
         pip install -r requirements.txt
         python -m pytest tests/ -v
 
-  # Étape 2 : Scan secrets avec Gitleaks (bloquant)
+  # Étape 2 : Build minimal du frontend React
+  - name: 'node:22-slim'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        cd services/front
+        npm install
+        npm run build
+
+  # Étape 3 : Scan secrets avec Gitleaks (bloquant)
   - name: 'zricethezav/gitleaks'
     entrypoint: 'gitleaks'
     args: ['detect', '--source', '.', '--config', '.gitleaks.toml', '--exit-code', '1', '-v']
 
-  # Étape 3 : SAST avec Semgrep
+  # Étape 4 : SAST avec Semgrep
   - name: 'python:3.11-slim'
     entrypoint: 'bash'
     args:
@@ -23,7 +33,7 @@ steps:
         pip install semgrep
         semgrep --config=auto services/ --error
 
-  # Étape 4 : Scan IaC avec Checkov
+  # Étape 5 : Scan IaC avec Checkov
   - name: 'python:3.11-slim'
     entrypoint: 'bash'
     args:
@@ -32,7 +42,7 @@ steps:
         pip install checkov
         checkov -d terraform/ --compact --soft-fail
 
-  # Étape 5 : Build image API
+  # Étape 6 : Build image API
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'build'
@@ -40,7 +50,7 @@ steps:
       - 'europe-west1-docker.pkg.dev/$PROJECT_ID/notes-repo/api:$COMMIT_SHA'
       - './services/api'
 
-  # Étape 6 : Scan image avec Trivy (fail sur CVE critique)
+  # Étape 7 : Scan image avec Trivy (fail sur CVE critique)
   - name: 'aquasec/trivy'
     args:
       - 'image'
@@ -50,11 +60,11 @@ steps:
       - 'CRITICAL'
       - 'europe-west1-docker.pkg.dev/$PROJECT_ID/notes-repo/api:$COMMIT_SHA'
 
-  # Étape 7 : Push image
+  # Étape 8 : Push image
   - name: 'gcr.io/cloud-builders/docker'
     args: ['push', 'europe-west1-docker.pkg.dev/$PROJECT_ID/notes-repo/api:$COMMIT_SHA']
 
-  # Étape 8 : Déploiement sur Cloud Run staging
+  # Étape 9 : Déploiement sur Cloud Run staging
   - name: 'gcr.io/cloud-builders/gcloud'
     args:
       - 'run'
@@ -65,6 +75,9 @@ steps:
       - '--platform=managed'
       - '--no-allow-unauthenticated'
       - '--service-account=notes-api-sa@$PROJECT_ID.iam.gserviceaccount.com'
+      - '--add-cloudsql-instances=$PROJECT_ID:europe-west1:staging-notes-db'
+      - '--set-env-vars=DB_USER=notes-app,DB_NAME=notes,INSTANCE_CONNECTION_NAME=$PROJECT_ID:europe-west1:staging-notes-db'
+      - '--set-secrets=DB_PASSWORD=staging-db-password:latest'
 
 options:
   logging: CLOUD_LOGGING_ONLY
