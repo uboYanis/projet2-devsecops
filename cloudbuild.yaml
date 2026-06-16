@@ -70,7 +70,7 @@ steps:
     args:
       - '-c'
       - |
-        DB_HOST=$(cat /workspace/db_host.txt)
+        DB_HOST=$$(cat /workspace/db_host.txt)
         gcloud run deploy notes-api-staging \
           --image=europe-west1-docker.pkg.dev/$PROJECT_ID/notes-repo/api:$COMMIT_SHA \
           --region=europe-west1 \
@@ -78,7 +78,7 @@ steps:
           --no-allow-unauthenticated \
           --service-account=notes-api-sa@$PROJECT_ID.iam.gserviceaccount.com \
           --set-secrets=DB_PASSWORD=staging-db-password:latest \
-          --set-env-vars=DB_HOST=$DB_HOST,DB_NAME=notes,DB_USER=notes-app \
+          --set-env-vars=DB_HOST=$$DB_HOST,DB_NAME=notes,DB_USER=notes-app \
           --vpc-connector=staging-vpc-connector \
           --vpc-egress=private-ranges-only
 
