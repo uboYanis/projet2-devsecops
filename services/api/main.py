@@ -39,6 +39,8 @@ async def add_trace_id(request: Request, call_next):
     response.headers["X-Trace-Id"] = trace_id
     return response
 
+
+""" SQL Injection
 @app.get("/notes/vuln")
 def vuln(q: str):
     import psycopg2
@@ -46,6 +48,7 @@ def vuln(q: str):
     cur = conn.cursor()
     cur.execute(f"SELECT * FROM notes WHERE title LIKE '%{q}%'")
     return cur.fetchall()
+"""
 
 def get_db():
     return psycopg2.connect(
