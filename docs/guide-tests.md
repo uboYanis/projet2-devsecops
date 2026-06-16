@@ -215,7 +215,7 @@ gitleaks detect --source . --config .gitleaks.toml -v
 gitleaks detect --source . --config .gitleaks.toml -v
 # Attendu → Finding: DB_PASSWORD = "SuperSecret123!" — exit code 1
 ```
-
+ 
 ---
 
 ### Semgrep — analyse statique (SAST)
