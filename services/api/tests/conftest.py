@@ -4,7 +4,8 @@ import sys, os
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-# Mock cursor partagé entre tous les tests
+import main  # import du module seul (pas de startup ici)
+
 _cursor = MagicMock()
 _cursor.__enter__ = lambda s: _cursor
 _cursor.__exit__ = MagicMock(return_value=False)
@@ -16,17 +17,16 @@ _conn.__enter__ = lambda s: _conn
 _conn.__exit__ = MagicMock(return_value=False)
 _conn.cursor.return_value = _cursor
 
-# Patch psycopg2 avant tout import de main
-_patch = patch("psycopg2.connect", return_value=_conn)
+# Patch main.get_db avant la création du TestClient (qui déclenche startup/init_db)
+_patch = patch("main.get_db", return_value=_conn)
 _patch.start()
 
-from main import app
 from fastapi.testclient import TestClient
 
 
 @pytest.fixture(scope="session")
 def client():
-    return TestClient(app)
+    return TestClient(main.app)
 
 
 @pytest.fixture(autouse=True)

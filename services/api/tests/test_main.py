@@ -1,6 +1,3 @@
-from conftest import client  # noqa: F401 — fixture session
-
-
 # ─── Tests nominaux ───────────────────────────────────────────────────────────
 
 def test_health(client):
