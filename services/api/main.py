@@ -1,6 +1,8 @@
 import uuid
 import os
 import logging
+import psycopg2
+import psycopg2.extras
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, field_validator
@@ -37,6 +39,35 @@ async def add_trace_id(request: Request, call_next):
     response.headers["X-Trace-Id"] = trace_id
     return response
 
+
+def get_db():
+    return psycopg2.connect(
+        host=os.environ["DB_HOST"],
+        dbname=os.environ.get("DB_NAME", "notes"),
+        user=os.environ.get("DB_USER", "notes-app"),
+        password=os.environ["DB_PASSWORD"],
+        sslmode="require",
+    )
+
+
+def init_db():
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS notes (
+                    id      SERIAL PRIMARY KEY,
+                    title   VARCHAR(200) NOT NULL,
+                    content TEXT         NOT NULL
+                )
+            """)
+        conn.commit()
+
+
+@app.on_event("startup")
+def startup():
+    init_db()
+
+
 class Note(BaseModel):
     title: str
     content: str
@@ -61,41 +92,60 @@ class Note(BaseModel):
             raise ValueError("Contenu trop long (max 10 000 caractères)")
         return v
 
-notes_db = {}
-counter = 1
 
 @app.post("/notes", status_code=201)
 @limiter.limit("10/minute")
 def create_note(note: Note, request: Request):
-    global counter
-    note_id = counter
-    notes_db[note_id] = {"id": note_id, "title": note.title, "content": note.content}
+    with get_db() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(
+                "INSERT INTO notes (title, content) VALUES (%s, %s) RETURNING *",
+                (note.title, note.content),
+            )
+            row = cur.fetchone()
+        conn.commit()
     logger.info("Note créée", extra={"trace_id": request.state.trace_id})
-    counter += 1
-    return notes_db[note_id]
+    return dict(row)
+
 
 @app.get("/notes")
 @limiter.limit("30/minute")
 def list_notes(request: Request):
-    return list(notes_db.values())
+    with get_db() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute("SELECT * FROM notes ORDER BY id")
+            rows = cur.fetchall()
+    return [dict(r) for r in rows]
+
 
 @app.delete("/notes/{note_id}")
 @limiter.limit("10/minute")
 def delete_note(note_id: int, request: Request):
-    if note_id not in notes_db:
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM notes WHERE id = %s RETURNING id", (note_id,))
+            deleted = cur.fetchone()
+        conn.commit()
+    if not deleted:
         raise HTTPException(status_code=404, detail="Note non trouvée")
-    del notes_db[note_id]
     logger.info(f"Note supprimée id={note_id}", extra={"trace_id": request.state.trace_id})
     return {"message": "supprimée"}
+
 
 @app.get("/health")
 def health():
     return {"status": "ok"}
 
-# Recherche avec requete parametree (protection SQLi)
+
 @app.get("/notes/search")
 def search_notes(q: str, request: Request):
     if len(q) > 100:
         raise HTTPException(status_code=400, detail="Requête trop longue")
-    results = [n for n in notes_db.values() if q.lower() in n["title"].lower()]
-    return results
+    with get_db() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(
+                "SELECT * FROM notes WHERE title ILIKE %s ORDER BY id",
+                (f"%{q}%",),
+            )
+            rows = cur.fetchall()
+    return [dict(r) for r in rows]

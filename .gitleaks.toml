@@ -13,4 +13,5 @@ keywords = ["password", "passwd", "pwd", "secret", "token"]
   [rules.allowlist]
   # Variables shell ($NEW_PASSWORD) et exemples pédagogiques dans la doc
   regexes = ['''\$[A-Z_]+''']
+  #exclu la doc
   paths = ['''docs/rapport-securite\.md''', '''docs/runbook\.md''']

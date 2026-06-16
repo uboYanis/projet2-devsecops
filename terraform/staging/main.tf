@@ -32,3 +32,8 @@ module "database" {
   db_password            = data.google_secret_manager_secret_version.db_password.secret_data
   private_vpc_connection = module.network.private_vpc_connection
 }
+
+output "db_host" {
+  value     = module.database.db_private_ip
+  sensitive = true
+}

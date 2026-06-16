@@ -92,9 +92,9 @@ Transactionnel — API REST synchrone avec worker asynchrone planifié
 **Correspondants par catégorie d'usagers**
 
 | Catégorie | Correspondant |
-|---|---|
-| Développeurs | [À compléter] |
-| Opérations | [À compléter] |
+|---|---------------|
+| Développeurs | Assala]       |
+| Opérations | [A]           |
 | Sécurité | [À compléter] |
 
 **Maîtrise d'œuvre externalisée**  
@@ -637,13 +637,13 @@ gcloud kms keys list \
 **Tests**
 ```bash
 # Sans token → 403
-curl -o /dev/null -s -w "%{http_code}\n" $SERVICE_URL/health
+curl -o /dev/null -s -w "%{http_code}\n" https://notes-api-staging-jkx6b532qq-ew.a.run.app/health
 # 403
 
 # Avec token → 200
 TOKEN=$(gcloud auth print-identity-token)
 curl -H "Authorization: Bearer $TOKEN" \
-  -o /dev/null -s -w "%{http_code}\n" $SERVICE_URL/health
+  -o /dev/null -s -w "%{http_code}\n" https://notes-api-staging-jkx6b532qq-ew.a.run.app/health
 # 200
 ```
 
@@ -662,7 +662,7 @@ curl -H "Authorization: Bearer $TOKEN" \
 **Test négatif**
 ```bash
 # Titre vide → 422
-curl -X POST $SERVICE_URL/notes \
+curl -X POST https://notes-api-staging-jkx6b532qq-ew.a.run.app/notes \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"title":"","content":"test"}'
@@ -988,7 +988,7 @@ gcloud run services add-iam-policy-binding notes-api-staging \
   --role="roles/run.invoker" \
   --project=projet2-staging
 
-curl -o /dev/null -s -w "Sans token : %{http_code}\n" $SERVICE_URL/health
+curl -o /dev/null -s -w "Sans token : %{http_code}\n" https://notes-api-staging-jkx6b532qq-ew.a.run.app/health
 # Sans token : 200
 ```
 
@@ -1017,7 +1017,7 @@ Note : l'org policy GCP (`constraints/iam.allowedPolicyMemberTypes`) bloque stru
 **APRÈS**
 
 ```bash
-curl -o /dev/null -s -w "Sans token : %{http_code}\n" $SERVICE_URL/health
+curl -o /dev/null -s -w "Sans token : %{http_code}\n" https://notes-api-staging-jkx6b532qq-ew.a.run.app/health
 # Sans token : 403
 ```
 Accès refusé ✅
@@ -1226,8 +1226,8 @@ TOKEN=$(gcloud auth print-identity-token)
 SERVICE_URL=$(gcloud run services describe notes-api-staging \
   --region=europe-west1 --project=projet2-staging --format='value(status.url)')
 
-curl -H "Authorization: Bearer $TOKEN" $SERVICE_URL/health
-curl -H "Authorization: Bearer $TOKEN" -X POST $SERVICE_URL/notes \
+curl -H "Authorization: Bearer $TOKEN" https://notes-api-staging-jkx6b532qq-ew.a.run.app/health
+curl -H "Authorization: Bearer $TOKEN" -X POST https://notes-api-staging-jkx6b532qq-ew.a.run.app/notes \
   -H "Content-Type: application/json" \
   -d '{"title":"Demo","content":"Note de demonstration"}'
 
