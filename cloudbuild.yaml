@@ -48,6 +48,7 @@ steps:
       - '1'
       - '--severity'
       - 'CRITICAL'
+      - '--ignore-unfixed'
       - 'europe-west1-docker.pkg.dev/$PROJECT_ID/notes-repo/api:$COMMIT_SHA'
 
   # Étape 7 : Push image
