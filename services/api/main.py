@@ -5,6 +5,7 @@ import psycopg2
 import psycopg2.extras
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, field_validator
 from slowapi import Limiter
 from slowapi.util import get_remote_address
@@ -126,6 +127,10 @@ def list_notes(request: Request):
             cur.execute("SELECT * FROM notes ORDER BY id")
             rows = cur.fetchall()
     return [dict(r) for r in rows]
+
+
+if os.path.isdir("static"):
+    app.mount("/", StaticFiles(directory="static", html=True), name="static")
 
 
 @app.delete("/notes/{note_id}")

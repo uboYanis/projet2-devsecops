@@ -76,6 +76,12 @@ tests/test_main.py::test_create_note_title_too_long PASSED
 
 ## 2. Tests manuels de l'API (Cloud Run — staging)
 
+> **⚠️ Avec IAP activé (`--iap`)**, l'accès navigateur passe désormais par un login Google (redirection vers l'écran de consentement) au lieu d'un token brut dans l'URL. Les commandes `curl` ci-dessous, basées sur `gcloud auth print-identity-token`, sont à **revalider après l'activation d'IAP** : IAP peut exiger un token dont l'`audience` correspond au client OAuth IAP (et non un identity-token générique). Si les appels `curl` échouent avec un 401/403 alors que le compte est bien autorisé (`roles/iap.httpsResourceAccessor`), utiliser :
+> ```bash
+> export TOKEN=$(gcloud auth print-identity-token --audiences=<IAP_CLIENT_ID>)
+> ```
+> où `<IAP_CLIENT_ID>` se trouve dans la console GCP → Sécurité → Identity-Aware Proxy → service `notes-api-staging` → "Détails OAuth".
+
 ### Prérequis : récupérer l'URL et le token
 
 ```bash
@@ -268,7 +274,8 @@ checkov -d terraform/ --compact
 **Ce qu'il fait** : scanne l'image Docker construite à la recherche de CVE (failles connues) dans les dépendances Python et les paquets système.
 
 ```bash
-docker build -t notes-api:test ./services/api
+cd services/front && npm ci && npm run build && cd ../..
+docker build -f services/api/Dockerfile -t notes-api:test .
 
 docker run --rm \
   -v /var/run/docker.sock:/var/run/docker.sock \
@@ -281,7 +288,7 @@ docker run --rm \
 python-jose==3.3.0
 ```
 ```bash
-docker build -t notes-api:vuln ./services/api
+docker build -f services/api/Dockerfile -t notes-api:vuln .
 docker run --rm \
   -v /var/run/docker.sock:/var/run/docker.sock \
   aquasec/trivy image --severity CRITICAL notes-api:vuln
@@ -297,10 +304,12 @@ docker run --rm \
 **Ce qu'il fait** : construit l'image de production et vérifie qu'elle démarre correctement.
 
 ```bash
-docker build -t notes-api:test ./services/api
+cd services/front && npm ci && npm run build && cd ../..
+docker build -f services/api/Dockerfile -t notes-api:test .
 docker run -p 8080:8080 notes-api:test
 curl http://localhost:8080/health
 # Attendu → {"status":"ok"}
+# Ouvrir http://localhost:8080/ dans un navigateur → l'UI React doit s'afficher (pas d'IAP en local)
 ```
 
 **Test négatif** : modifier `CMD` dans le `Dockerfile` avec un mauvais port :
@@ -323,9 +332,9 @@ docker run --rm --entrypoint whoami notes-api:test
 # Attendu → appuser
 ```
 
-**Test négatif** : supprimer les lignes `RUN useradd -m appuser` et `USER appuser` du `Dockerfile`, reconstruire :
+**Test négatif** : supprimer les lignes `RUN adduser -D appuser` et `USER appuser` du `Dockerfile`, reconstruire :
 ```bash
-docker build -t notes-api:root ./services/api
+docker build -f services/api/Dockerfile -t notes-api:root .
 docker run --rm --entrypoint whoami notes-api:root
 # Attendu → root  ← faille de sécurité
 ```
@@ -346,7 +355,7 @@ docker run notes-worker:test
 
 ## 5. Test du pipeline CI/CD complet
 
-**Ce qu'il fait** : déclenche automatiquement les 8 étapes de sécurité sur Cloud Build à chaque push sur `main`. Le pipeline bloque le déploiement si l'une des étapes échoue.
+**Ce qu'il fait** : déclenche automatiquement les 10 étapes de sécurité sur Cloud Build à chaque push sur `main`. Le pipeline bloque le déploiement si l'une des étapes échoue.
 
 ```bash
 git commit --allow-empty -m "test: trigger pipeline"
@@ -361,16 +370,20 @@ Suivre l'exécution dans la console GCP → Cloud Build → Historique.
 | 2 | Scan secrets | Gitleaks | 1 secret détecté |
 | 3 | SAST | Semgrep | 1 finding bloquant |
 | 4 | Scan IaC | Checkov | violations critiques |
-| 5 | Build image | Docker | erreur de build |
-| 6 | Scan CVE image | Trivy | 1 CVE CRITICAL |
-| 7 | Push image | Docker | erreur de push |
-| 8 | Déploiement | Cloud Run | erreur de déploiement |
+| 5 | Build frontend | npm (Vite) | erreur de build |
+| 6 | Build image API | Docker | erreur de build |
+| 7 | Scan CVE image | Trivy | 1 CVE CRITICAL |
+| 8 | Push image | Docker | erreur de push |
+| 9 | Récupération IP Cloud SQL | Terraform output | erreur de lecture d'état |
+| 10 | Déploiement (IAP activé) | Cloud Run | erreur de déploiement |
 
-**Test négatif (démo pipeline bloqué)** : ajouter `python-jose==3.3.0` dans `requirements.txt` et pousser → le pipeline s'arrête à l'étape 6 (Trivy) avec `exit status 1`. Les étapes 7 et 8 ne s'exécutent pas — l'image vulnérable n'est jamais déployée.
+**Test négatif (démo pipeline bloqué)** : ajouter `python-jose==3.3.0` dans `requirements.txt` et pousser → le pipeline s'arrête à l'étape 7 (Trivy) avec `exit status 1`. Les étapes suivantes ne s'exécutent pas — l'image vulnérable n'est jamais déployée.
 
 ---
 
 ## 6. Tests sur Cloud Run (staging)
+
+> Depuis l'activation d'IAP (`--iap`), un utilisateur ouvrant l'URL du service dans un navigateur est automatiquement redirigé vers l'écran de connexion Google, puis n'a accès à l'UI que s'il fait partie de `allowed_users` (module Terraform `iap`, `roles/iap.httpsResourceAccessor`). Les comptes non autorisés reçoivent un 403 d'IAP avant même d'atteindre le code de l'application. Les appels `curl`/OIDC ci-dessous restent utiles pour les tests automatisés (CI, scripts) qui n'ont pas de navigateur.
 
 ### Authentification OIDC obligatoire
 

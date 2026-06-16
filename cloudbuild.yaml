@@ -32,15 +32,27 @@ steps:
         pip install checkov
         checkov -d terraform/ --compact --soft-fail
 
-  # Étape 5 : Build image API
+  # Étape 5 : Build du frontend React
+  - name: 'node:20-alpine'
+    entrypoint: 'sh'
+    args:
+      - '-c'
+      - |
+        cd services/front
+        npm ci
+        npm run build
+
+  # Étape 6 : Build image API (contexte racine pour inclure le frontend buildé)
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'build'
       - '-t'
       - 'europe-west1-docker.pkg.dev/$PROJECT_ID/notes-repo/api:$COMMIT_SHA'
-      - './services/api'
+      - '-f'
+      - 'services/api/Dockerfile'
+      - '.'
 
-  # Étape 6 : Scan image avec Trivy (fail sur CVE critique)
+  # Étape 7 : Scan image avec Trivy (fail sur CVE critique)
   - name: 'aquasec/trivy'
     args:
       - 'image'
@@ -51,11 +63,11 @@ steps:
       - '--ignore-unfixed'
       - 'europe-west1-docker.pkg.dev/$PROJECT_ID/notes-repo/api:$COMMIT_SHA'
 
-  # Étape 7 : Push image
+  # Étape 8 : Push image
   - name: 'gcr.io/cloud-builders/docker'
     args: ['push', 'europe-west1-docker.pkg.dev/$PROJECT_ID/notes-repo/api:$COMMIT_SHA']
 
-  # Étape 8 : Récupérer l'IP privée de Cloud SQL via Terraform output
+  # Étape 9 : Récupérer l'IP privée de Cloud SQL via Terraform output
   - name: 'hashicorp/terraform:1.5'
     entrypoint: 'sh'
     args:
@@ -65,7 +77,7 @@ steps:
         terraform init -reconfigure
         terraform output -raw db_host > /workspace/db_host.txt
 
-  # Étape 9 : Déploiement sur Cloud Run staging
+  # Étape 10 : Déploiement sur Cloud Run staging (IAP activé)
   - name: 'gcr.io/cloud-builders/gcloud'
     entrypoint: 'bash'
     args:
@@ -77,6 +89,7 @@ steps:
           --region=europe-west1 \
           --platform=managed \
           --no-allow-unauthenticated \
+          --iap \
           --service-account=notes-api-sa@$PROJECT_ID.iam.gserviceaccount.com \
           --set-secrets=DB_PASSWORD=staging-db-password:latest \
           --set-env-vars=DB_HOST=$$DB_HOST,DB_NAME=notes,DB_USER=notes-app \

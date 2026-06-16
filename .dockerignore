@@ -1,0 +1,7 @@
+.git
+terraform/
+docs/
+monitoring/
+**/node_modules
+**/__pycache__
+**/*.pyc
