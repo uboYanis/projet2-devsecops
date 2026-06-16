@@ -37,3 +37,11 @@ output "db_host" {
   value     = module.database.db_private_ip
   sensitive = true
 }
+
+module "iap" {
+  source                 = "../modules/iap"
+  project_id             = var.project_id
+  region                 = var.region
+  cloud_run_service_name = "notes-api-staging"
+  allowed_users           = ["user:assalahamoudi1@gmail.com"]
+}

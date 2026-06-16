@@ -3,6 +3,10 @@ title = "Gitleaks config - projet2-devsecops"
 [extend]
 useDefault = true
 
+[allowlist]
+# Toute la documentation (exemples pédagogiques, secrets fictifs) est exclue du scan
+paths = ['''.*\.md$''']
+
 [[rules]]
 id = "generic-password-assignment"
 description = "Mot de passe en clair dans le code"
@@ -11,7 +15,5 @@ entropy = 0
 keywords = ["password", "passwd", "pwd", "secret", "token"]
 
   [rules.allowlist]
-  # Variables shell ($NEW_PASSWORD) et exemples pédagogiques dans la doc
+  # Variables shell ($NEW_PASSWORD)
   regexes = ['''\$[A-Z_]+''']
-  #exclu la doc
-  paths = ['''docs/rapport-securite\.md''', '''docs/runbook\.md''']
