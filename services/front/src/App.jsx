@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { listNotes, searchNotes, createNote, deleteNote } from "./api.js";
+import { listNotes, searchNotes, createNote, deleteNote, getMe } from "./api.js";
 import { useDebounce } from "./useDebounce.js";
 import { ToastStack } from "./Toasts.jsx";
 
@@ -14,6 +14,14 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const debouncedQuery = useDebounce(query, 300);
+
+  const [userEmail, setUserEmail] = useState(null);
+
+  useEffect(() => {
+    getMe()
+      .then((me) => setUserEmail(me.email))
+      .catch(() => setUserEmail(null));
+  }, []);
 
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -106,7 +114,19 @@ export default function App() {
           <h1>Notes</h1>
           <p className="app-subtitle">Vos notes, simplement.</p>
         </div>
-        {!loading && <span className="count-badge">{notes.length}</span>}
+        <div className="app-header-actions">
+          {!loading && <span className="count-badge">{notes.length}</span>}
+          {userEmail ? (
+            <div className="auth-pill">
+              <span className="auth-email" title={userEmail}>{userEmail}</span>
+              <a className="auth-link" href="/_gcp_iap/clear_login_cookie">Déconnexion</a>
+            </div>
+          ) : (
+            <button type="button" className="secondary" onClick={() => window.location.reload()}>
+              Se connecter
+            </button>
+          )}
+        </div>
       </header>
 
       <div className="search-bar">

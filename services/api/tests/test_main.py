@@ -6,6 +6,18 @@ def test_health(client):
     assert r.json() == {"status": "ok"}
 
 
+def test_me_anonymous(client):
+    r = client.get("/me")
+    assert r.status_code == 200
+    assert r.json() == {"email": None}
+
+
+def test_me_authenticated(client):
+    r = client.get("/me", headers={"X-Goog-Authenticated-User-Email": "accounts.google.com:demo@example.com"})
+    assert r.status_code == 200
+    assert r.json() == {"email": "demo@example.com"}
+
+
 def test_create_note(client, reset_cursor):
     reset_cursor.fetchone.return_value = {"id": 1, "title": "Test", "content": "Contenu"}
     r = client.post("/notes", json={"title": "Test", "content": "Contenu"})

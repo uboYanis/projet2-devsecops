@@ -148,6 +148,13 @@ def health():
     return {"status": "ok"}
 
 
+@app.get("/me")
+def me(request: Request):
+    raw = request.headers.get("X-Goog-Authenticated-User-Email")
+    email = raw.split(":", 1)[1] if raw and ":" in raw else raw
+    return {"email": email}
+
+
 @app.get("/notes/search")
 def search_notes(q: str, request: Request):
     if len(q) > 100:

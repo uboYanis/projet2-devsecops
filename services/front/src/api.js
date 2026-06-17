@@ -22,6 +22,10 @@ async function request(path, options = {}) {
   return res.json();
 }
 
+export function getMe() {
+  return request("/me");
+}
+
 export function listNotes() {
   return request("/notes");
 }
