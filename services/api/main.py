@@ -129,10 +129,6 @@ def list_notes(request: Request):
     return [dict(r) for r in rows]
 
 
-if os.path.isdir("static"):
-    app.mount("/", StaticFiles(directory="static", html=True), name="static")
-
-
 @app.delete("/notes/{note_id}")
 @limiter.limit("10/minute")
 def delete_note(note_id: int, request: Request):
@@ -164,3 +160,7 @@ def search_notes(q: str, request: Request):
             )
             rows = cur.fetchall()
     return [dict(r) for r in rows]
+
+
+if os.path.isdir("static"):
+    app.mount("/", StaticFiles(directory="static", html=True), name="static")
