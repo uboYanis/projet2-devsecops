@@ -38,6 +38,19 @@ def test_delete_note_not_found(client, reset_cursor):
     assert r.status_code == 404
 
 
+def test_update_note(client, reset_cursor):
+    reset_cursor.fetchone.return_value = {"id": 1, "title": "Modifié", "content": "Nouveau contenu"}
+    r = client.put("/notes/1", json={"title": "Modifié", "content": "Nouveau contenu"})
+    assert r.status_code == 200
+    assert r.json()["title"] == "Modifié"
+
+
+def test_update_note_not_found(client, reset_cursor):
+    reset_cursor.fetchone.return_value = None
+    r = client.put("/notes/9999", json={"title": "Test", "content": "Contenu"})
+    assert r.status_code == 404
+
+
 def test_create_note_empty_title(client):
     r = client.post("/notes", json={"title": "", "content": "Contenu"})
     assert r.status_code == 422

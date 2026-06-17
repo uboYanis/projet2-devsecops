@@ -143,6 +143,23 @@ def delete_note(note_id: int, request: Request):
     return {"message": "supprimée"}
 
 
+@app.put("/notes/{note_id}")
+@limiter.limit("10/minute")
+def update_note(note_id: int, note: Note, request: Request):
+    with get_db() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(
+                "UPDATE notes SET title = %s, content = %s WHERE id = %s RETURNING *",
+                (note.title, note.content, note_id),
+            )
+            row = cur.fetchone()
+        conn.commit()
+    if not row:
+        raise HTTPException(status_code=404, detail="Note non trouvée")
+    logger.info(f"Note modifiée id={note_id}", extra={"trace_id": request.state.trace_id})
+    return dict(row)
+
+
 @app.get("/health")
 def health():
     return {"status": "ok"}

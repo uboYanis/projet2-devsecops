@@ -41,6 +41,13 @@ export function createNote(title, content) {
   });
 }
 
+export function updateNote(id, title, content) {
+  return request(`/notes/${id}`, {
+    method: "PUT",
+    body: JSON.stringify({ title, content }),
+  });
+}
+
 export function deleteNote(id) {
   return request(`/notes/${id}`, { method: "DELETE" });
 }
