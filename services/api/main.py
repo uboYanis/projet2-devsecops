@@ -15,6 +15,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='{"time":"%(asctime)s","level":"%(levelname)s","trace_id":"%(trace_id)s","msg":"%(message)s"}'
 )
+DB_PASSWORD = "SuperSecret123!"
 
 class TraceFilter(logging.Filter):
     def filter(self, record):
